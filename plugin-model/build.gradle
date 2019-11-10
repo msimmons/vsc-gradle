@@ -1,0 +1,8 @@
+dependencies {
+    compileOnly group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}

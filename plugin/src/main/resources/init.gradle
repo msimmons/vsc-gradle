@@ -1,0 +1,15 @@
+initscript {
+    repositories {
+        maven { 
+            url new File(System.getenv('REPO_DIR')).toURI().toURL()
+        }
+    }
+
+    dependencies {
+        classpath 'net.contrapt:plugin:1.0.0-SNAPSHOT'
+    }
+}
+
+allprojects {
+    apply plugin: net.contrapt.gradle.plugin.VSCPlugin
+}

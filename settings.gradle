@@ -1,0 +1,3 @@
+rootProject.name = 'vsc-gradle'
+include 'server', 'plugin', 'plugin-model'
+

@@ -1,0 +1,44 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+
+subprojects {
+    group 'net.contrapt'
+    version '1.0.0-SNAPSHOT'
+
+    apply plugin: 'kotlin'
+
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = '1.8'
+        }
+    }
+
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://repo.gradle.org/gradle/libs-releases-local/"
+        }
+        maven {
+            url "https://raw.githubusercontent.com/msimmons/m2repo/master"
+        }
+    }
+
+    dependencies {
+        //compile "org.jetbrains.kotlin:kotlin-compiler:$kotlin_version"
+        compileOnly "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+        testCompile "io.kotlintest:kotlintest-runner-junit5:3.4.2"
+        testCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

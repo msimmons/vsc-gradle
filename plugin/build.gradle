@@ -1,0 +1,45 @@
+plugins {
+    id 'maven-publish'
+    id 'java-gradle-plugin'
+}
+
+dependencies {
+    compile gradleApi()
+    compileOnly project(":plugin-model")
+    compileOnly group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
+    testCompile gradleTestKit()
+}
+
+publishing {
+    repositories {
+        maven {
+            url new File("${project.rootDir}/out/m2/repo").toURI().toURL()
+        }
+    }
+
+    publications {
+        Plugin(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+jar {
+    from project(":plugin-model").sourceSets.main.output
+    from { configurations.compileOnly.collect { it.name.contains('jvmcode-model') ? (it.isDirectory() ? it : zipTree(it)) : [] } }
+}
+
+task deploy(type: Copy, dependsOn: ['publish']) {
+    from ("${project.buildDir}/resources/main") {
+        include 'init.gradle'
+    }
+    into "${project.rootDir}/out/m2"
+}
+
+clean {
+    doLast() {
+        file("${project.rootDir}/out/m2").eachFileRecurse {
+            it.delete()
+        }
+    }
+}

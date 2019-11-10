@@ -1,0 +1,33 @@
+dependencies {
+    compile "org.gradle:gradle-tooling-api:$gradle_version"
+    compile project(":plugin-model")
+    compileOnly "io.vertx:vertx-core:$vertx_version"
+    compile group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
+
+    runtime "ch.qos.logback:logback-classic:1.2.3"
+    testCompile project(":plugin-model")
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'net.contrapt.gradle.Application'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+task deploy(type: Copy, dependsOn: ['build']) {
+    from ("${project.buildDir}/libs") {
+        include jar.archiveName
+        rename jar.archiveName, 'vsc-gradle.jar'
+    }
+    into "${project.rootDir}/out"
+}
+
+jar {
+    from project(":plugin-model").sourceSets.main.output
+}
