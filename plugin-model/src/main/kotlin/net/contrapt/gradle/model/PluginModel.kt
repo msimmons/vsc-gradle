@@ -12,7 +12,6 @@ interface PluginModel : JvmProjectData {
     class Impl(
             override val dependencySources: Collection<DependencySourceData>,
             override val classDirs: Collection<ClasspathData>,
-            override val classpath: String,
             override val tasks: Collection<String>
     ) : PluginModel, Serializable
 

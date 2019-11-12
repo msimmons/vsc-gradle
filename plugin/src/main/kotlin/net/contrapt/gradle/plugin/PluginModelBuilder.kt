@@ -2,7 +2,6 @@ package net.contrapt.gradle.plugin
 
 import net.contrapt.gradle.model.PluginModel
 import net.contrapt.jvmcode.model.ClasspathData
-import net.contrapt.jvmcode.model.DependencyData
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.tooling.provider.model.ToolingModelBuilder
@@ -17,14 +16,14 @@ class PluginModelBuilder : ToolingModelBuilder {
 
         val tasks = mutableSetOf<String>()
         getTasks(tasks,"", project)
-        val dependencies = mutableMapOf<String, DependencyData>()
+        val dependencies = mutableMapOf<String, PluginDependency>()
         getDependencies(dependencies, project)
         getSourceDependencies(project, dependencies)
-        val dependencySource = PluginDependencySource("Gradle", "Gradle", dependencies.values.sorted().toMutableList())
+        val dependencySource = PluginDependencySource("Gradle", project.path, dependencies.values.sorted().toMutableList())
         val classpaths = mutableSetOf<ClasspathData>()
         getClasspath(classpaths, project)
 
-        return PluginModel.Impl(mutableListOf(dependencySource), classpaths, "", tasks)
+        return PluginModel.Impl(mutableListOf(dependencySource), classpaths, tasks)
     }
 
     fun getTasks(tasks: MutableCollection<String>, prefix: String, project: Project) : Collection<String> {
@@ -35,7 +34,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         return tasks
     }
 
-    fun getSourceDependencies(project: Project, dependencies: MutableMap<String, DependencyData>) {
+    fun getSourceDependencies(project: Project, dependencies: MutableMap<String, PluginDependency>) {
         project.configurations.create("vsc-gradle")
         dependencies.forEach {
             project.dependencies.add("vsc-gradle", "${it.key}:sources")
@@ -48,7 +47,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         }
     }
 
-    fun getDependencies(dependencies: MutableMap<String, DependencyData>, project: Project) {
+    fun getDependencies(dependencies: MutableMap<String, PluginDependency>, project: Project) {
         project.childProjects.forEach {
             getDependencies(dependencies, it.value)
         }
