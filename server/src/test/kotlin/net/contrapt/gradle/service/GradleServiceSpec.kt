@@ -9,7 +9,12 @@ import org.junit.jupiter.api.Test
  */
 class GradleServiceSpec {
 
-    val service = GradleService("/home/mark/work/vsc-gradle/server/src/test/resources/test-project", "/home/mark/work/vsc-gradle")
+    val projectDir = System.getProperty("projectDir", "")
+    val service = GradleService("$projectDir/server/src/test/resources/test-project", projectDir)
+
+    init {
+        service.refresh()
+    }
 
     @Test
     fun testSomething() {

@@ -21,7 +21,7 @@ class GradleService(val projectDir: String, val extensionDir: String) {
     private val gradleConnector = GradleConnector.newConnector()
     private val connection: ProjectConnection
     private val pluginModelBuilder: ModelBuilder<PluginModel>
-    private var pluginModel : PluginModel
+    lateinit private var pluginModel : PluginModel
 
     init {
         gradleConnector.useBuildDistribution()
@@ -31,7 +31,6 @@ class GradleService(val projectDir: String, val extensionDir: String) {
         pluginModelBuilder = connection.model(PluginModel::class.java)
         pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "$extensionDir/out/m2/repo"))
         pluginModelBuilder.withArguments("--init-script", "${extensionDir}/out/m2/init.gradle")
-        pluginModel = pluginModelBuilder.get()
     }
 
     /**
@@ -42,6 +41,7 @@ class GradleService(val projectDir: String, val extensionDir: String) {
     }
 
     fun getTasks() : Collection<String> {
+        if (!::pluginModel.isInitialized) refresh()
         return pluginModel.tasks
     }
 
@@ -49,6 +49,7 @@ class GradleService(val projectDir: String, val extensionDir: String) {
      * Get dependencies sources
      */
     fun getDependencySources() : Collection<DependencySourceData> {
+        if (!::pluginModel.isInitialized) refresh()
         return pluginModel.dependencySources
     }
 
@@ -56,6 +57,7 @@ class GradleService(val projectDir: String, val extensionDir: String) {
      * Get class source and output directories
      */
     fun getClasspath() : Collection<ClasspathData> {
+        if (!::pluginModel.isInitialized) refresh()
         return pluginModel.classDirs
     }
 

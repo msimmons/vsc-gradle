@@ -7,6 +7,6 @@ import java.io.Serializable
 class PluginDependencySource(
         override val name: String,
         override val description: String,
-        override val dependencies: MutableCollection<DependencyData>
+        override val dependencies: Collection<DependencyData>
 ) : DependencySourceData, Serializable {
 }
