@@ -15,7 +15,8 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:{build.gradle,build.gradle.kts}"
+    "workspaceContains:build.gradle",
+    "workspaceContains:build.gradle.kts"
   ],
   "main": "./out/src/extension",
   "contributes": {
