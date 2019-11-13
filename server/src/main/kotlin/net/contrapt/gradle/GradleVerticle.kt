@@ -25,6 +25,7 @@ class GradleVerticle : AbstractVerticle() {
                     val projectDir = message.body().getString("projectDir")
                     val extensionDir = message.body().getString("extensionDir")
                     gradleService = GradleService(projectDir, extensionDir)
+                    gradleService.refresh()
                     val project = ProjectData(gradleService.getDependencySources(), gradleService.getClasspath())
                     val projectJson = JsonObject.mapFrom(project)
                     vertx.eventBus().send("jvmcode.update-project", JsonObject().put("source", "Gradle").put("project", projectJson))
