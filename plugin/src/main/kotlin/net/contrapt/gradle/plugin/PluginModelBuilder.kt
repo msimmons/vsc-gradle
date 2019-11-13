@@ -16,7 +16,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         val tasks = getTasks("", project)
         val dependencies = getDependencies(project)
         resolveSourceArtifacts(project, dependencies)
-        val dependencySource = PluginDependencySource("Gradle:${project.gradle.gradleVersion}", project.buildFile.absolutePath, dependencies.values.sorted().toMutableList())
+        val dependencySource = PluginDependencySource("Gradle:${project.gradle.gradleVersion}", project.buildFile.absolutePath, dependencies.values.sorted())
         val classpaths = getClasspathDatas(project)
         return PluginModel.Impl(listOf(dependencySource), classpaths, tasks)
     }
