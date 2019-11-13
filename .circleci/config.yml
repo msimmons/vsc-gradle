@@ -33,7 +33,7 @@ jobs:
       - restore_cache:
           keys:
             *npm_cache_keys
-      - run: ./gradlew build
+      - run: ./gradlew assemble deploy test
       - run: 
           shell: /bin/bash --login -eo pipefail 
           command: |
