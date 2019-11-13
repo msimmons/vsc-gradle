@@ -15,4 +15,7 @@ interface PluginModel : JvmProjectData {
             override val tasks: Collection<String>
     ) : PluginModel, Serializable
 
+    companion object {
+        val SOURCE = "Gradle"
+    }
 }

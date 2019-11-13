@@ -6,6 +6,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
+import net.contrapt.gradle.model.PluginModel
 import net.contrapt.gradle.model.ProjectData
 import net.contrapt.gradle.service.GradleService
 
@@ -28,7 +29,7 @@ class GradleVerticle : AbstractVerticle() {
                     gradleService.refresh()
                     val project = ProjectData(gradleService.getDependencySources(), gradleService.getClasspath())
                     val projectJson = JsonObject.mapFrom(project)
-                    vertx.eventBus().send("jvmcode.update-project", JsonObject().put("source", "Gradle").put("project", projectJson))
+                    vertx.eventBus().send("jvmcode.update-project", JsonObject().put("source", PluginModel.SOURCE).put("project", projectJson))
                     future.complete(projectJson)
                 } catch (e: Exception) {
                     logger.error("Opening a project", e)
@@ -52,7 +53,7 @@ class GradleVerticle : AbstractVerticle() {
                     gradleService.refresh()
                     val project = ProjectData(gradleService.getDependencySources(), gradleService.getClasspath())
                     val projectJson = JsonObject.mapFrom(project)
-                    vertx.eventBus().publish("jvmcode.update-project", JsonObject().put("source", "Gradle").put("project", projectJson))
+                    vertx.eventBus().publish("jvmcode.update-project", JsonObject().put("source", PluginModel.SOURCE).put("project", projectJson))
                     future.complete(projectJson)
                 } catch (e: Exception) {
                     logger.error("Opening a project", e)

@@ -16,7 +16,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         val tasks = getTasks("", project)
         val dependencies = getDependencies(project)
         resolveSourceArtifacts(project, dependencies)
-        val dependencySource = PluginDependencySource("Gradle:${project.gradle.gradleVersion}", project.buildFile.absolutePath, dependencies.values.sorted())
+        val dependencySource = PluginDependencySource(PluginModel.SOURCE, "${project.gradle.gradleVersion}@${project.buildFile.absolutePath}", dependencies.values.sorted())
         val classpaths = getClasspathDatas(project)
         return PluginModel.Impl(listOf(dependencySource), classpaths, tasks)
     }
@@ -84,7 +84,7 @@ class PluginModelBuilder : ToolingModelBuilder {
             val convention = it.value
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->
-                    val cp = PluginClasspath("Gradle", ss.name, project.name)
+                    val cp = PluginClasspath(PluginModel.SOURCE, ss.name, project.name)
                     cp.sourceDirs.addAll(ss.allSource.srcDirs.map { it.absolutePath })
                     cp.classDirs.addAll(ss.output.files.map { it.absolutePath })
                     classpaths.add(cp)
