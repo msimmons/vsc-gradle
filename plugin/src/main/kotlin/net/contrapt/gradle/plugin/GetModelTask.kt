@@ -25,5 +25,8 @@ open class GetModelTask : DefaultTask() {
         model.tasks.forEach {
             println(it)
         }
+        model.errors.forEach {
+            println(it)
+        }
     }
 }

@@ -6,8 +6,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
-import net.contrapt.gradle.model.PluginModel
-import net.contrapt.gradle.model.ProjectData
+import net.contrapt.gradle.model.ConnectRequest
 import net.contrapt.gradle.service.GradleService
 
 class GradleVerticle : AbstractVerticle() {
@@ -23,21 +22,18 @@ class GradleVerticle : AbstractVerticle() {
         vertx.eventBus().consumer<JsonObject>("gradle.connect") { message ->
             vertx.executeBlocking(Handler<Promise<JsonObject>> { future ->
                 try {
-                    val projectDir = message.body().getString("projectDir")
-                    val extensionDir = message.body().getString("extensionDir")
-                    gradleService = GradleService(projectDir, extensionDir)
-                    gradleService.refresh()
-                    val project = ProjectData(gradleService.getDependencySources(), gradleService.getClasspath())
-                    val projectJson = JsonObject.mapFrom(project)
-                    vertx.eventBus().send("jvmcode.update-project", JsonObject().put("source", PluginModel.SOURCE).put("project", projectJson))
-                    future.complete(projectJson)
+                    val request = message.body().mapTo(ConnectRequest::class.java)
+                    gradleService = GradleService(request)
+                    val result = gradleService.refresh()
+                    vertx.eventBus().send("jvmcode.update-project", JsonObject.mapFrom(result.second))
+                    future.complete(JsonObject.mapFrom(result.first))
                 } catch (e: Exception) {
                     logger.error("Opening a project", e)
                     future.fail(e)
                 }
             }, false, Handler { ar ->
                 if (ar.failed()) {
-                    message.fail(1, ar.cause().toString())
+                    message.fail(1, "${ar.cause().toString()}\n${ar.cause().cause?.toString() ?: ""}")
                 } else {
                     message.reply(ar.result())
                 }
@@ -50,18 +46,16 @@ class GradleVerticle : AbstractVerticle() {
         vertx.eventBus().consumer<JsonObject>("gradle.refresh") { message ->
             vertx.executeBlocking(Handler<Promise<JsonObject>> { future ->
                 try {
-                    gradleService.refresh()
-                    val project = ProjectData(gradleService.getDependencySources(), gradleService.getClasspath())
-                    val projectJson = JsonObject.mapFrom(project)
-                    vertx.eventBus().publish("jvmcode.update-project", JsonObject().put("source", PluginModel.SOURCE).put("project", projectJson))
-                    future.complete(projectJson)
+                    val result = gradleService.refresh()
+                    vertx.eventBus().publish("jvmcode.update-project", JsonObject.mapFrom(result.second))
+                    future.complete(JsonObject.mapFrom(result.first))
                 } catch (e: Exception) {
                     logger.error("Opening a project", e)
                     future.fail(e)
                 }
             }, false, Handler { ar ->
                 if (ar.failed()) {
-                    message.fail(1, ar.cause().toString())
+                    message.fail(1, "${ar.cause().toString()}\n${ar.cause().cause?.toString() ?: ""}")
                 } else {
                     message.reply(ar.result())
                 }

@@ -1,15 +1,14 @@
 'use strict';
 
 import * as vscode from 'vscode'
+import { ConnectResult, ConnectRequest } from 'server-models'
 
 export class GradleService {
 
     projectDir: string
     extensionDir: string
     jvmcode: any
-    tasks: string[]
-    dependencies: any[]
-    classpath: any[]
+    result: ConnectResult
 
     constructor(projectDir: string, extensionDir: string, jvmcode: any) {
         this.projectDir = projectDir
@@ -17,22 +16,19 @@ export class GradleService {
         this.jvmcode = jvmcode
     }
 
-    public async connect(progress: vscode.Progress<{message?: string}>) : Promise<any> {
+    public async connect(progress: vscode.Progress<{message?: string}>) : Promise<ConnectResult> {
         progress.report({message: 'Gradle: Connecting to '+this.projectDir})
-        let reply = await this.jvmcode.send('gradle.connect', { projectDir: this.projectDir, extensionDir: this.extensionDir })
-        this.tasks = reply.body.tasks
-        this.dependencies = reply.body.dependencies
-        this.classpath = reply.body.classpath
-        return reply.body
+        let request = { projectDir: this.projectDir, extensionDir: this.extensionDir } as ConnectRequest
+        let reply = await this.jvmcode.send('gradle.connect', request)
+        this.result = reply.body as ConnectResult
+        return this.result
     }
 
     public async refresh(progress: vscode.Progress<{message?: string}>) : Promise<any> {
         progress.report({message: 'Gradle: Refreshing '+this.projectDir})
         let reply = await this.jvmcode.send('gradle.refresh', { })
-        this.tasks = reply.body.tasks
-        this.dependencies = reply.body.dependencies
-        this.classpath = reply.body.classpath
-        return reply.body
+        this.result = reply.body as ConnectResult
+        return this.result
     }
 
     public async runTask(task: string, progress: vscode.Progress<{message?: string}>) {

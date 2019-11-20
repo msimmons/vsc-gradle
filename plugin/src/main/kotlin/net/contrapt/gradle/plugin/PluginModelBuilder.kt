@@ -13,12 +13,13 @@ class PluginModelBuilder : ToolingModelBuilder {
     }
 
     override fun buildAll(modelName: String, project: Project): PluginModel {
+        val errors = mutableListOf<String>()
         val tasks = getTasks("", project)
-        val dependencies = getDependencies(project)
-        resolveSourceArtifacts(project, dependencies)
-        val dependencySource = PluginDependencySource(PluginModel.SOURCE, "${project.gradle.gradleVersion}@${project.buildFile.absolutePath}", dependencies.values.sorted())
-        val classpaths = getClasspathDatas(project)
-        return PluginModel.Impl(listOf(dependencySource), classpaths, tasks)
+        val dependencies = getDependencies(project, errors)
+        val description = "Gradle ${project.gradle.gradleVersion} (${project.buildFile.absolutePath})"
+        val dependencySource = PluginDependencySource(PluginModel.SOURCE, description, dependencies.values.sorted())
+        val classpaths = getClasspathDatas(project, errors)
+        return PluginModel.Impl(PluginModel.SOURCE, listOf(dependencySource), classpaths, tasks, errors)
     }
 
     fun getTasks(prefix: String, project: Project, tasks: MutableCollection<String> = mutableSetOf<String>()) : Collection<String> {
@@ -29,13 +30,13 @@ class PluginModelBuilder : ToolingModelBuilder {
         return tasks
     }
 
-    fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>) {
-        project.configurations.create("vsc-gradle")
+    fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>, errors: MutableList<String>) {
+        val config = project.configurations.create("vsc-gradle")
         dependencies.forEach {
-            project.dependencies.add("vsc-gradle", "${it.key}:sources")
+            project.dependencies.add(config.name, "${it.key}:sources")
         }
         try {
-            project.configurations.getByName("vsc-gradle").resolvedConfiguration.resolvedArtifacts.forEach {
+            config.resolvedConfiguration.lenientConfiguration.artifacts.forEach {
                 if (it.classifier == "sources") {
                     val key = "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
                     dependencies[key]?.sourceFileName = it.file.absolutePath
@@ -43,26 +44,29 @@ class PluginModelBuilder : ToolingModelBuilder {
             }
         }
         catch (e: Exception) {
+            errors.add("${e.message}: ${e.cause?.message ?: ""}")
             project.logger.debug("Error resolving source configuration", e)
         }
+        errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies.map { it.problem.message ?: "" })
     }
 
-    fun getDependencies(project: Project, dependencies: MutableMap<String, PluginDependency> = mutableMapOf()) : Map<String, PluginDependency> {
+    fun getDependencies(project: Project, errors: MutableList<String>, dependencies: MutableMap<String, PluginDependency> = mutableMapOf()) : Map<String, PluginDependency> {
         project.childProjects.forEach {
-            getDependencies(it.value, dependencies)
+            dependencies.putAll(getDependencies(it.value, errors, dependencies))
         }
-        project.configurations.forEach {config ->
+        val projectDependencies = mutableMapOf<String, PluginDependency>()
+        project.configurations.filter {it.isCanBeResolved}.forEach {config ->
             val statedDependencies = config.allDependencies.map {
                 "${it.group}:${it.name}:${it.version}"
             }
             try {
-                config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+                config.resolvedConfiguration.resolvedArtifacts.filter { it.moduleVersion.id.group != project.rootProject.name }.forEach { artifact ->
                     val group = artifact.moduleVersion.id.group
                     val name = artifact.moduleVersion.id.name
                     val version = artifact.moduleVersion.id.version
                     val key = "$group:$name:$version"
                     val isTransitive = !statedDependencies.contains(key)
-                    val dep = dependencies.getOrPut(key) {
+                    val dep = projectDependencies.getOrPut(key) {
                         PluginDependency(artifact.file.absolutePath, null, null, group, name, version, mutableSetOf(), mutableSetOf(), isTransitive, false)
                     }
                     dep.scopes.add(config.name)
@@ -70,15 +74,17 @@ class PluginModelBuilder : ToolingModelBuilder {
                 }
             }
             catch (e: Exception) {
+                errors.add("${e.message}: ${e.cause?.message ?: ""}")
                 project.logger.debug("Error resolving ${config.name}", e)
             }
         }
-        return dependencies
+        resolveSourceArtifacts(project, projectDependencies, errors)
+        return dependencies + projectDependencies
     }
 
-    fun getClasspathDatas(project: Project, classpaths: MutableSet<ClasspathData> = mutableSetOf()) : Set<ClasspathData> {
+    fun getClasspathDatas(project: Project, errors: MutableList<String>, classpaths: MutableSet<ClasspathData> = mutableSetOf()) : Set<ClasspathData> {
         project.childProjects.forEach {
-            getClasspathDatas(it.value, classpaths)
+            getClasspathDatas(it.value, errors, classpaths)
         }
         project.convention.plugins.forEach {
             val convention = it.value

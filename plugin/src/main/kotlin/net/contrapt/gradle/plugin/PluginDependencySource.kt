@@ -5,7 +5,7 @@ import net.contrapt.jvmcode.model.DependencySourceData
 import java.io.Serializable
 
 class PluginDependencySource(
-        override val name: String,
+        override val source: String,
         override val description: String,
         override val dependencies: Collection<DependencyData>
 ) : DependencySourceData, Serializable {

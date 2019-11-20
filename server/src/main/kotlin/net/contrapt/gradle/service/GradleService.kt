@@ -1,6 +1,9 @@
 package net.contrapt.gradle.service
 
+import net.contrapt.gradle.model.ConnectRequest
+import net.contrapt.gradle.model.ConnectResult
 import net.contrapt.gradle.model.PluginModel
+import net.contrapt.gradle.model.ProjectData
 import net.contrapt.jvmcode.model.ClasspathData
 import net.contrapt.jvmcode.model.DependencySourceData
 import org.gradle.tooling.GradleConnector
@@ -16,7 +19,7 @@ import java.io.File
 /**
  * Created by mark on 6/17/17.
  */
-class GradleService(val projectDir: String, val extensionDir: String) {
+class GradleService(val request: ConnectRequest) {
 
     private val gradleConnector = GradleConnector.newConnector()
     private val connection: ProjectConnection
@@ -25,19 +28,22 @@ class GradleService(val projectDir: String, val extensionDir: String) {
 
     init {
         gradleConnector.useBuildDistribution()
-        gradleConnector.forProjectDirectory(File(projectDir))
+        gradleConnector.forProjectDirectory(File(request.projectDir))
         connection = gradleConnector.connect()
 
         pluginModelBuilder = connection.model(PluginModel::class.java)
-        pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "$extensionDir/out/m2/repo"))
-        pluginModelBuilder.withArguments("--init-script", "${extensionDir}/out/m2/init.gradle")
+        pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "${request.extensionDir}/out/m2/repo"))
+        pluginModelBuilder.withArguments("--init-script", "${request.extensionDir}/out/m2/init.gradle")
     }
 
     /**
      * Refresh the pluginModel model
      */
-    fun refresh() {
+    fun refresh() : Pair<ConnectResult, ProjectData> {
         pluginModel = pluginModelBuilder.get()
+        val result = ConnectResult(pluginModel.tasks, pluginModel.errors)
+        val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.classDirs)
+        return result to data
     }
 
     fun getTasks() : Collection<String> {

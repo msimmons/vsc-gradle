@@ -1,9 +1,13 @@
 buildscript {
     repositories {
         mavenCentral()
+        maven {
+            url "https://raw.githubusercontent.com/msimmons/m2repo/master"
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "net.contrapt:kt2ts:1.0.0"
     }
 }
 

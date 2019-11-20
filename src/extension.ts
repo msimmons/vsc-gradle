@@ -37,6 +37,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.withProgress({ location: ProgressLocation.Window, title: 'Connect to Gradle' }, (progress) => {
             return gradleService.connect(progress).then((reply) => {
                 progress.report({message: 'Connected'})
+                if (reply.errors) {
+                    vscode.window.showErrorMessage(reply.errors.join('\n'))
+                }
             })
             .catch((error) => {
                 vscode.window.showErrorMessage('Error connecting to gradle: ' + error.message)
@@ -48,6 +51,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.withProgress({ location: ProgressLocation.Window, title: 'Refresh Gradle' }, (progress) => {
             return gradleService.refresh(progress).then((reply) => {
                 progress.report({message: 'Refreshed'})
+                if (reply.errors) {
+                    vscode.window.showErrorMessage(reply.errors.join('\n'))
+                }
             })
             .catch((error) => {
                 vscode.window.showErrorMessage('Error refreshing gradle: ' + error.message)
@@ -56,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
     }))
 
     context.subscriptions.push(vscode.commands.registerCommand('gradle.run-task', () => {
-        vscode.window.showQuickPick(gradleService.tasks, {}).then((choice) => {
+        vscode.window.showQuickPick(gradleService.result.tasks, {}).then((choice) => {
             // TODO Allow mutliple task choices
             if (!choice ) return
             // TODO Actually show progress

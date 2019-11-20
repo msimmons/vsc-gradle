@@ -1,3 +1,5 @@
+apply plugin: net.contrapt.kt2ts.Kt2TsPlugin
+
 dependencies {
     compile "org.gradle:gradle-tooling-api:$gradle_version"
     compile project(":plugin-model")
@@ -20,7 +22,29 @@ jar {
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
-task deploy(type: Copy, dependsOn: ['build']) {
+task deploy(type: Copy, dependsOn: ['deployJar', 'deployTs']) {
+}
+
+task deployTs(type: Copy, dependsOn: ['kt2ts']) {
+    // Typescript defs
+    from ("${project.buildDir}/kt2ts") {
+        include "models.d.ts"
+        rename "models.d.ts", "index.d.ts"
+    }
+    into "${project.rootDir}/node_modules/server-models"
+}
+
+k2ts {
+    jarFile = "${project.buildDir}/libs/${jar.archiveName}"
+    packages += [
+          "net.contrapt.gradle.model"
+    ]
+    outFile = "models.d.ts"
+    moduleName = "server-models"
+}
+kt2ts.dependsOn = ['jar']
+
+task deployJar(type: Copy, dependsOn: ['assemble']) {
     from ("${project.buildDir}/libs") {
         include jar.archiveName
         rename jar.archiveName, 'vsc-gradle.jar'
