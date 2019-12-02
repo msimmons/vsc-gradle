@@ -1,11 +1,9 @@
 package net.contrapt.gradle.service
 
-import net.contrapt.gradle.model.ConnectRequest
-import net.contrapt.gradle.model.ConnectResult
-import net.contrapt.gradle.model.PluginModel
-import net.contrapt.gradle.model.ProjectData
-import net.contrapt.jvmcode.model.ClasspathData
+import net.contrapt.gradle.model.*
 import net.contrapt.jvmcode.model.DependencySourceData
+import net.contrapt.jvmcode.model.PathData
+import org.gradle.internal.exceptions.LocationAwareException
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ModelBuilder
 import org.gradle.tooling.ProjectConnection
@@ -20,6 +18,9 @@ import java.io.File
  * Created by mark on 6/17/17.
  */
 class GradleService(val request: ConnectRequest) {
+
+    //Settings file '/home/mark/work/vsc-gradle/server/src/test/resources/test-project/settings.gradle' line: 2
+    private val LAE_PATTERN = ".*'(.*)'\\s?line:\\s?([0-9]+)\\s?.*".toRegex().toPattern()
 
     private val gradleConnector = GradleConnector.newConnector()
     private val connection: ProjectConnection
@@ -42,7 +43,7 @@ class GradleService(val request: ConnectRequest) {
     fun refresh() : Pair<ConnectResult, ProjectData> {
         pluginModel = pluginModelBuilder.get()
         val result = ConnectResult(pluginModel.tasks, pluginModel.errors)
-        val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.classDirs)
+        val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.paths)
         return result to data
     }
 
@@ -62,9 +63,9 @@ class GradleService(val request: ConnectRequest) {
     /**
      * Get class source and output directories
      */
-    fun getClasspath() : Collection<ClasspathData> {
+    fun getClasspath() : Collection<PathData> {
         if (!::pluginModel.isInitialized) refresh()
-        return pluginModel.classDirs
+        return pluginModel.paths
     }
 
     /**
@@ -115,4 +116,32 @@ class GradleService(val request: ConnectRequest) {
         }
     }
 
+    private fun processCause(e: Throwable, message: StringBuilder): Pair<String, Int>? {
+        message.append("${e.message}\n")
+        return when (e::class.java.name) {
+            LocationAwareException::class.java.name -> {
+                val matcher = LAE_PATTERN.matcher(e.message ?: "")
+                if (matcher.matches()) {
+                    val file = matcher.group(1)
+                    val line = matcher.group(2).toInt()
+                    file to line
+                }
+                else null
+            }
+            else -> null
+        }
+    }
+
+    fun getDiagnostic(thrown: Throwable): PluginDiagnostic {
+        var curExc = thrown
+        val message = StringBuilder()
+        var location = "" to 0
+        println("Current Exception: ${curExc::class.java} ${curExc::class} ${curExc is LocationAwareException}")
+        location = processCause(curExc, message) ?: location
+        while (curExc.cause != null) {
+            curExc = curExc.cause as Throwable
+            location = processCause(curExc, message) ?: location
+        }
+        return PluginDiagnostic.Impl(location.first, location.second, message.toString())
+    }
 }

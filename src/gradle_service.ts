@@ -5,30 +5,20 @@ import { ConnectResult, ConnectRequest } from 'server-models'
 
 export class GradleService {
 
-    projectDir: string
-    extensionDir: string
     jvmcode: any
-    result: ConnectResult
 
-    constructor(projectDir: string, extensionDir: string, jvmcode: any) {
-        this.projectDir = projectDir
-        this.extensionDir = extensionDir
+    constructor(jvmcode: any) {
         this.jvmcode = jvmcode
     }
 
-    public async connect(progress: vscode.Progress<{message?: string}>) : Promise<ConnectResult> {
-        progress.report({message: 'Gradle: Connecting to '+this.projectDir})
-        let request = { projectDir: this.projectDir, extensionDir: this.extensionDir } as ConnectRequest
+    public async connect(request: ConnectRequest) : Promise<ConnectResult> {
         let reply = await this.jvmcode.send('gradle.connect', request)
-        this.result = reply.body as ConnectResult
-        return this.result
+        return reply.body as ConnectResult
     }
 
-    public async refresh(progress: vscode.Progress<{message?: string}>) : Promise<any> {
-        progress.report({message: 'Gradle: Refreshing '+this.projectDir})
+    public async refresh() : Promise<ConnectResult> {
         let reply = await this.jvmcode.send('gradle.refresh', { })
-        this.result = reply.body as ConnectResult
-        return this.result
+        return reply.body as ConnectResult
     }
 
     public async runTask(task: string, progress: vscode.Progress<{message?: string}>) {

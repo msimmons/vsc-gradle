@@ -6,3 +6,11 @@ configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
 }
+
+jar {
+//    from  configurations.compileOnly.collect {
+//        def i1 = [] //it.name.contains('gradle') ? zipTree(it).matching {include '**org/gradle/internal/exceptions/**'} : []
+//        def i2 = it.name.contains('gradle') ? zipTree(it).matching {include '**/GradleException**'} : []
+//        [i1, i2]
+//    }
+}

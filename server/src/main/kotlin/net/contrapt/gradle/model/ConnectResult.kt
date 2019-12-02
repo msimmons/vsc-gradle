@@ -5,5 +5,5 @@ package net.contrapt.gradle.model
  */
 class ConnectResult(
         val tasks: Collection<String>,
-        val errors: Collection<String>
+        val errors: Collection<PluginDiagnostic>
 )

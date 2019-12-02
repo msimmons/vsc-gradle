@@ -19,7 +19,7 @@ open class GetModelTask : DefaultTask() {
                 println("${it.groupId}:${it.artifactId}:${it.version} ${it.transitive} ${!it.sourceFileName.isNullOrBlank()}")
             }
         }
-        model.classDirs.forEach {
+        model.paths.forEach {
             println("${it.name} ${it.module} \n   ${it.sourceDirs} \n   ${it.classDirs}")
         }
         model.tasks.forEach {

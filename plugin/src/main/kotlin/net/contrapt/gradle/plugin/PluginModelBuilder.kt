@@ -1,9 +1,11 @@
 package net.contrapt.gradle.plugin
 
+import net.contrapt.gradle.model.PluginDiagnostic
 import net.contrapt.gradle.model.PluginModel
-import net.contrapt.jvmcode.model.ClasspathData
+import net.contrapt.jvmcode.model.PathData
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.internal.exceptions.LocationAwareException
 import org.gradle.tooling.provider.model.ToolingModelBuilder
 
 class PluginModelBuilder : ToolingModelBuilder {
@@ -13,13 +15,47 @@ class PluginModelBuilder : ToolingModelBuilder {
     }
 
     override fun buildAll(modelName: String, project: Project): PluginModel {
-        val errors = mutableListOf<String>()
-        val tasks = getTasks("", project)
-        val dependencies = getDependencies(project, errors)
+        val errors = mutableListOf<PluginDiagnostic>()
+        val taskResult = runCatching {  getTasks("", project) }
+        val dependenciesResult = runCatching { getDependencies(project, errors) }
+        val pathsResult = runCatching { getPathDatas(project, errors) }
+        // Process any errors
+        if (taskResult.isFailure) processException(errors, taskResult.exceptionOrNull())
+        if (dependenciesResult.isFailure) processException(errors, dependenciesResult.exceptionOrNull())
+        if (pathsResult.isFailure) processException(errors, pathsResult.exceptionOrNull())
+        // Create the model
+        val tasks = taskResult.getOrElse { emptyList() }
+        val dependencies = dependenciesResult.getOrElse { emptyMap() }
+        val classpaths = pathsResult.getOrElse { emptySet() }
         val description = "Gradle ${project.gradle.gradleVersion} (${project.buildFile.absolutePath})"
         val dependencySource = PluginDependencySource(PluginModel.SOURCE, description, dependencies.values.sorted())
-        val classpaths = getClasspathDatas(project, errors)
         return PluginModel.Impl(PluginModel.SOURCE, listOf(dependencySource), classpaths, tasks, errors)
+    }
+
+    private fun processException(errors: MutableList<PluginDiagnostic>, exception: Throwable?) {
+        if (exception != null) errors.add(getDiagnostic(exception))
+    }
+
+    private fun processCause(e: Throwable, message: StringBuilder): Pair<String, Int> {
+        message.append("${e.message}\n")
+        return when (e) {
+            is LocationAwareException -> {
+                (e.location ?: "") to (e.lineNumber ?: 0)
+            }
+            else -> "" to 0
+        }
+    }
+
+    private fun getDiagnostic(thrown: Throwable): PluginDiagnostic {
+        var curExc = thrown
+        val message = StringBuilder()
+        println("Current Exception: ${curExc::class.java} ${curExc::class} ${curExc is LocationAwareException}")
+        var location = processCause(curExc, message)
+        while (curExc.cause != null) {
+            curExc = curExc.cause as Throwable
+            location = processCause(curExc, message)
+        }
+        return PluginDiagnostic.Impl(location.first, location.second, message.toString())
     }
 
     fun getTasks(prefix: String, project: Project, tasks: MutableCollection<String> = mutableSetOf<String>()) : Collection<String> {
@@ -30,7 +66,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         return tasks
     }
 
-    fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>, errors: MutableList<String>) {
+    fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>, errors: MutableList<PluginDiagnostic>) {
         val config = project.configurations.create("vsc-gradle")
         dependencies.forEach {
             project.dependencies.add(config.name, "${it.key}:sources")
@@ -44,13 +80,15 @@ class PluginModelBuilder : ToolingModelBuilder {
             }
         }
         catch (e: Exception) {
-            errors.add("${e.message}: ${e.cause?.message ?: ""}")
-            project.logger.debug("Error resolving source configuration", e)
+            errors.add(getDiagnostic(e))
+            //project.logger.debug("Error resolving source configuration", e)
         }
-        errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies.map { it.problem.message ?: "" })
+        errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies.map {
+            getDiagnostic(it.problem)
+        })
     }
 
-    fun getDependencies(project: Project, errors: MutableList<String>, dependencies: MutableMap<String, PluginDependency> = mutableMapOf()) : Map<String, PluginDependency> {
+    fun getDependencies(project: Project, errors: MutableList<PluginDiagnostic>, dependencies: MutableMap<String, PluginDependency> = mutableMapOf()) : Map<String, PluginDependency> {
         project.childProjects.forEach {
             dependencies.putAll(getDependencies(it.value, errors, dependencies))
         }
@@ -74,23 +112,22 @@ class PluginModelBuilder : ToolingModelBuilder {
                 }
             }
             catch (e: Exception) {
-                errors.add("${e.message}: ${e.cause?.message ?: ""}")
-                project.logger.debug("Error resolving ${config.name}", e)
+                processException(errors, e)
             }
         }
         resolveSourceArtifacts(project, projectDependencies, errors)
         return dependencies + projectDependencies
     }
 
-    fun getClasspathDatas(project: Project, errors: MutableList<String>, classpaths: MutableSet<ClasspathData> = mutableSetOf()) : Set<ClasspathData> {
+    fun getPathDatas(project: Project, errors: MutableList<PluginDiagnostic>, classpaths: MutableSet<PathData> = mutableSetOf()) : Set<PathData> {
         project.childProjects.forEach {
-            getClasspathDatas(it.value, errors, classpaths)
+            getPathDatas(it.value, errors, classpaths)
         }
         project.convention.plugins.forEach {
             val convention = it.value
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->
-                    val cp = PluginClasspath(PluginModel.SOURCE, ss.name, project.name)
+                    val cp = PluginPath(PluginModel.SOURCE, ss.name, project.name)
                     cp.sourceDirs.addAll(ss.allSource.srcDirs.map { it.absolutePath })
                     cp.classDirs.addAll(ss.output.files.map { it.absolutePath })
                     classpaths.add(cp)

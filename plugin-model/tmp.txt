@@ -1,0 +1,18 @@
+
+> Configure project :plugin-model
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/ConfigurationNotConsumableException.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/Contextual.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/DefaultMultiCauseException$1.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/DefaultMultiCauseException.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/DiagnosticsVisitor.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/FailureResolutionAware.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/FormattingDiagnosticsVisitor$Candidate.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/FormattingDiagnosticsVisitor.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/LocationAwareException$1.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/LocationAwareException.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/MultiCauseException.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/internal/exceptions/ValueCollectingDiagnosticsVisitor.class
+/home/mark/work/vsc-gradle/plugin-model/build/tmp/expandedArchives/gradle-api-5.0.jar_b6071bc36225abd2ebb104aa0152cec1/org/gradle/api/GradleException.class
+
+BUILD SUCCESSFUL in 17s
+3 actionable tasks: 2 executed, 1 up-to-date

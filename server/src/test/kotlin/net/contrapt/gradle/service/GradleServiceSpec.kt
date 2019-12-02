@@ -2,6 +2,7 @@ package net.contrapt.gradle.service
 
 import net.contrapt.gradle.model.ConnectRequest
 import net.contrapt.gradle.model.ConnectResult
+import net.contrapt.gradle.model.ProjectData
 import net.contrapt.jvmcode.model.ProjectUpdateData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -15,11 +16,19 @@ class GradleServiceSpec {
     val projectDir = System.getProperty("projectDir", "")
     val request = ConnectRequest("$projectDir/server/src/test/resources/test-project", projectDir)
     val service = GradleService(request)
-    val result : Pair<ConnectResult, ProjectUpdateData>
+    var result : Pair<ConnectResult, ProjectUpdateData>
 
     init {
-        result = service.refresh()
+        try {
+            result = service.refresh()
+        }
+        catch(e: Exception) {
+            val c = ConnectResult(listOf(), listOf(service.getDiagnostic(e)))
+            println(c.errors)
+            result = Pair(c, ProjectData("test", listOf(), listOf()))
+        }
     }
+
 
     @Test
     fun testSomething() {

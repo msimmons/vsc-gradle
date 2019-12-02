@@ -7,6 +7,7 @@ import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import net.contrapt.gradle.model.ConnectRequest
+import net.contrapt.gradle.model.ConnectResult
 import net.contrapt.gradle.service.GradleService
 
 class GradleVerticle : AbstractVerticle() {
@@ -28,12 +29,13 @@ class GradleVerticle : AbstractVerticle() {
                     vertx.eventBus().send("jvmcode.update-project", JsonObject.mapFrom(result.second))
                     future.complete(JsonObject.mapFrom(result.first))
                 } catch (e: Exception) {
-                    logger.error("Opening a project", e)
                     future.fail(e)
                 }
             }, false, Handler { ar ->
                 if (ar.failed()) {
-                    message.fail(1, "${ar.cause().toString()}\n${ar.cause().cause?.toString() ?: ""}")
+                    logger.info("In failed branch ${ar.cause()}")
+                    val d = gradleService.getDiagnostic(ar.cause())
+                    message.reply(JsonObject.mapFrom(ConnectResult(listOf(), listOf(d))))
                 } else {
                     message.reply(ar.result())
                 }
@@ -50,12 +52,13 @@ class GradleVerticle : AbstractVerticle() {
                     vertx.eventBus().publish("jvmcode.update-project", JsonObject.mapFrom(result.second))
                     future.complete(JsonObject.mapFrom(result.first))
                 } catch (e: Exception) {
-                    logger.error("Opening a project", e)
                     future.fail(e)
                 }
             }, false, Handler { ar ->
                 if (ar.failed()) {
-                    message.fail(1, "${ar.cause().toString()}\n${ar.cause().cause?.toString() ?: ""}")
+                    logger.info("In failed branch ${ar.cause()}")
+                    val d = gradleService.getDiagnostic(ar.cause())
+                    message.reply(JsonObject.mapFrom(ConnectResult(listOf(), listOf(d))))
                 } else {
                     message.reply(ar.result())
                 }

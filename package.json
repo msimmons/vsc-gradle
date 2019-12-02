@@ -33,7 +33,19 @@
     ],
     "menus": {},
     "configuration": {
-      "title": "Gradle Configuration"
+      "title": "Gradle Configuration",
+      "properties": {
+        "vsc-gradle.autorefresh": {
+          "type":"boolean",
+          "description": "Whether gradle project autorefrshes when files matching 'refreshGlob' pattern change",
+          "default":true
+        },
+        "vsc-gradle.refreshGlob": {
+          "type":"string",
+          "description": "File watcher glob for autorefreshing the gradle project, relative to workspace root",
+          "default":"**/*gradle*"
+        }
+      }
     }
   },
   "scripts": {

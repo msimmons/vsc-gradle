@@ -2,12 +2,16 @@ apply plugin: net.contrapt.kt2ts.Kt2TsPlugin
 
 dependencies {
     compile "org.gradle:gradle-tooling-api:$gradle_version"
+    //compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile project(":plugin-model")
-    compileOnly "io.vertx:vertx-core:$vertx_version"
     compile group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
 
+    compileOnly "io.vertx:vertx-core:$vertx_version"
+    compileOnly gradleApi()
+
     runtime "ch.qos.logback:logback-classic:1.2.3"
-    testCompile project(":plugin-model")
+    
+    testCompile gradleApi()
 }
 
 configurations.all {
@@ -20,6 +24,11 @@ jar {
         attributes 'Main-Class': 'net.contrapt.gradle.Application'
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    from  configurations.compileOnly.collect {
+        def i1 = it.name.contains('gradle') ? zipTree(it).matching {include '**org/gradle/internal/exceptions/**'} : []
+        def i2 = [] //it.name.contains('gradle') ? zipTree(it).matching {include '**/GradleException**'} : []
+        [i1, i2]
+    }
 }
 
 task deploy(type: Copy, dependsOn: ['deployJar', 'deployTs']) {
