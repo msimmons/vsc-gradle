@@ -23,12 +23,8 @@ jar {
     manifest {
         attributes 'Main-Class': 'net.contrapt.gradle.Application'
     }
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    from  configurations.compileOnly.collect {
-        def i1 = it.name.contains('gradle') ? zipTree(it).matching {include '**org/gradle/internal/exceptions/**'} : []
-        def i2 = [] //it.name.contains('gradle') ? zipTree(it).matching {include '**/GradleException**'} : []
-        [i1, i2]
-    }
+    from  configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    from  configurations.compileOnly.collect { it.name.contains('gradle') ? zipTree(it).matching {include '**org/gradle/internal/exceptions/**'} : [] }
 }
 
 task deploy(type: Copy, dependsOn: ['deployJar', 'deployTs']) {

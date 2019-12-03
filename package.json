@@ -2,10 +2,11 @@
   "name": "vsc-gradle",
   "displayName": "VSC Gradle",
   "description": "Gradle integration for vscode",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "contrapt",
+  "license": "Apache 2.0",
   "engines": {
-    "vscode": "^1.28.0"
+    "vscode": "^1.40.2"
   },
   "repository": {
     "type": "git",
@@ -36,14 +37,14 @@
       "title": "Gradle Configuration",
       "properties": {
         "vsc-gradle.autorefresh": {
-          "type":"boolean",
+          "type": "boolean",
           "description": "Whether gradle project autorefrshes when files matching 'refreshGlob' pattern change",
-          "default":true
+          "default": true
         },
         "vsc-gradle.refreshGlob": {
-          "type":"string",
+          "type": "string",
           "description": "File watcher glob for autorefreshing the gradle project, relative to workspace root",
-          "default":"**/*gradle*"
+          "default": "**/*gradle*"
         }
       }
     }
