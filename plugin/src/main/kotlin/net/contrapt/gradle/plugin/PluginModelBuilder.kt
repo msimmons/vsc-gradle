@@ -20,9 +20,9 @@ class PluginModelBuilder : ToolingModelBuilder {
         val dependenciesResult = runCatching { getDependencies(project, errors) }
         val pathsResult = runCatching { getPathDatas(project, errors) }
         // Process any errors
-        if (taskResult.isFailure) processException(errors, taskResult.exceptionOrNull())
-        if (dependenciesResult.isFailure) processException(errors, dependenciesResult.exceptionOrNull())
-        if (pathsResult.isFailure) processException(errors, pathsResult.exceptionOrNull())
+        if (taskResult.isFailure) processException(project, errors, taskResult.exceptionOrNull())
+        if (dependenciesResult.isFailure) processException(project, errors, dependenciesResult.exceptionOrNull())
+        if (pathsResult.isFailure) processException(project, errors, pathsResult.exceptionOrNull())
         // Create the model
         val tasks = taskResult.getOrElse { emptyList() }
         val dependencies = dependenciesResult.getOrElse { emptyMap() }
@@ -32,8 +32,8 @@ class PluginModelBuilder : ToolingModelBuilder {
         return PluginModel.Impl(PluginModel.SOURCE, listOf(dependencySource), classpaths, tasks, errors)
     }
 
-    private fun processException(errors: MutableList<PluginDiagnostic>, exception: Throwable?) {
-        if (exception != null) errors.add(getDiagnostic(exception))
+    private fun processException(project: Project, errors: MutableList<PluginDiagnostic>, exception: Throwable?) {
+        if (exception != null) errors.add(getDiagnostic(project, exception))
     }
 
     private fun processCause(e: Throwable, message: StringBuilder): Pair<String, Int> {
@@ -46,7 +46,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         }
     }
 
-    private fun getDiagnostic(thrown: Throwable): PluginDiagnostic {
+    private fun getDiagnostic(project: Project, thrown: Throwable, optional: String? = null): PluginDiagnostic {
         var curExc = thrown
         val message = StringBuilder()
         var location = processCause(curExc, message)
@@ -54,6 +54,8 @@ class PluginModelBuilder : ToolingModelBuilder {
             curExc = curExc.cause as Throwable
             location = processCause(curExc, message)
         }
+        if (location.first.isEmpty()) location = Pair(project.buildFile.absolutePath, location.second)
+        if (optional != null) message.append(optional)
         return PluginDiagnostic.Impl(location.first, location.second, message.toString())
     }
 
@@ -66,12 +68,13 @@ class PluginModelBuilder : ToolingModelBuilder {
     }
 
     fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>, errors: MutableList<PluginDiagnostic>) {
-        val config = project.configurations.create("vsc-gradle")
+        val config = project.configurations.create("${project.name}-vsc-gradle")
         dependencies.forEach {
             project.dependencies.add(config.name, "${it.key}:sources")
         }
         try {
             config.resolvedConfiguration.lenientConfiguration.artifacts.forEach {
+                project.logger.lifecycle("Source artifact ${it.moduleVersion.id.name}")
                 if (it.classifier == "sources") {
                     val key = "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
                     dependencies[key]?.sourceFileName = it.file.absolutePath
@@ -79,12 +82,17 @@ class PluginModelBuilder : ToolingModelBuilder {
             }
         }
         catch (e: Exception) {
-            errors.add(getDiagnostic(e))
-            //project.logger.debug("Error resolving source configuration", e)
+            errors.add(getDiagnostic(project, e))
         }
-        errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies.map {
-            getDiagnostic(it.problem)
-        })
+        errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies
+                .filter {
+                    it.selector.module.group != project.group
+                }
+                .map {
+                    val optional = "Unresolved Source: ${it.selector.module.group}:${it.selector.module.name} in ${project.group}:${project.name}"
+                    getDiagnostic(project, it.problem, optional)
+                }
+        )
     }
 
     fun getDependencies(project: Project, errors: MutableList<PluginDiagnostic>, dependencies: MutableMap<String, PluginDependency> = mutableMapOf()) : Map<String, PluginDependency> {
@@ -92,12 +100,12 @@ class PluginModelBuilder : ToolingModelBuilder {
             dependencies.putAll(getDependencies(it.value, errors, dependencies))
         }
         val projectDependencies = mutableMapOf<String, PluginDependency>()
-        project.configurations.filter {it.isCanBeResolved}.forEach {config ->
+        project.configurations.filter { it.isCanBeResolved }.forEach {config ->
             val statedDependencies = config.allDependencies.map {
                 "${it.group}:${it.name}:${it.version}"
             }
             try {
-                config.resolvedConfiguration.resolvedArtifacts.filter { it.moduleVersion.id.group != project.rootProject.name }.forEach { artifact ->
+                config.resolvedConfiguration.lenientConfiguration.artifacts.forEach { artifact ->
                     val group = artifact.moduleVersion.id.group
                     val name = artifact.moduleVersion.id.name
                     val version = artifact.moduleVersion.id.version
@@ -111,8 +119,17 @@ class PluginModelBuilder : ToolingModelBuilder {
                 }
             }
             catch (e: Exception) {
-                processException(errors, e)
+                processException(project, errors, e)
             }
+            errors.addAll(config.resolvedConfiguration.lenientConfiguration.unresolvedModuleDependencies
+                    .filter {
+                        it.selector.module.group != project.group
+                    }
+                    .map {
+                        val optional = "Unresolved: ${it.selector.module.group}:${it.selector.module.name} in ${project.group}:${project.name}"
+                        getDiagnostic(project, it.problem, optional)
+                    }
+            )
         }
         resolveSourceArtifacts(project, projectDependencies, errors)
         return dependencies + projectDependencies
