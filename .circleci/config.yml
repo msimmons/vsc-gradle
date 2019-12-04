@@ -36,9 +36,9 @@ jobs:
       - run:
           shell: /bin/bash --login -eo pipefail 
           command: |
-            ORG_GRADLE_PROJECT_gh_registry_uri=$GH_REGISTRY_URI
-            ORG_GRADLE_PROJECT_gh_registry_user=$GH_REGISTRY_USER
-            ORG_GRADLE_PROJECT_gh_registry_key=$GH_REGISTRY_KEY
+            export ORG_GRADLE_PROJECT_gh_registry_uri=$GH_REGISTRY_URI
+            export ORG_GRADLE_PROJECT_gh_registry_user=$GH_REGISTRY_USER
+            export ORG_GRADLE_PROJECT_gh_registry_key=$GH_REGISTRY_KEY
             ./gradlew assemble deploy test
             source ~/.nvm/nvm.sh
             nvm i 8
