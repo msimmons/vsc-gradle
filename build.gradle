@@ -30,7 +30,11 @@ subprojects {
             url "https://repo.gradle.org/gradle/libs-releases-local/"
         }
         maven {
-            url "https://raw.githubusercontent.com/msimmons/m2repo/master"
+            url "${gh_registry_uri}/jvmcode"
+            credentials {
+                username "$gh_registry_user"
+                password "$gh_registry_key"
+            }
         }
     }
 

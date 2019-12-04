@@ -49,7 +49,6 @@ class PluginModelBuilder : ToolingModelBuilder {
     private fun getDiagnostic(thrown: Throwable): PluginDiagnostic {
         var curExc = thrown
         val message = StringBuilder()
-        println("Current Exception: ${curExc::class.java} ${curExc::class} ${curExc is LocationAwareException}")
         var location = processCause(curExc, message)
         while (curExc.cause != null) {
             curExc = curExc.cause as Throwable
@@ -124,6 +123,7 @@ class PluginModelBuilder : ToolingModelBuilder {
             getPathDatas(it.value, errors, classpaths)
         }
         project.convention.plugins.forEach {
+            project.logger.lifecycle("Got plugin ${it.key} ${it.value}")
             val convention = it.value
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->

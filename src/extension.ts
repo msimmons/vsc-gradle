@@ -47,16 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
     }))
 
     context.subscriptions.push(vscode.commands.registerCommand('gradle.run-task', () => {
-        vscode.window.showQuickPick(gradleController.result.tasks, {}).then((choice) => {
-            // TODO Allow mutliple task choices
-            if (!choice ) return
-            // TODO Actually show progress
-            vscode.window.withProgress({ location: ProgressLocation.Window, title: choice }, (progress) => {
-                return gradleController.runTask(choice, progress).catch((error) => {
-                    vscode.window.showErrorMessage('Error running task: ' + error.message)
-                })
-            })
-        })
+        gradleController.runTask()
     }))
 }
 

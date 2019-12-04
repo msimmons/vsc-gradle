@@ -3,6 +3,7 @@
 import * as vscode from 'vscode'
 import { ConnectResult, ConnectRequest } from 'server-models'
 import { GradleService } from './gradle_service';
+import { ProgressLocation } from 'vscode';
 
 export class GradleController {
 
@@ -67,8 +68,18 @@ export class GradleController {
         })
     }
 
-    public async runTask(task: string, progress: vscode.Progress<{message?: string}>) {
-        progress.report({message: 'Starting '+task})
-        let reply = this.service.runTask(task, progress)
+    public async runTask() {
+        vscode.window.showQuickPick(this.result.tasks, {canPickMany: false}).then((choice) => {
+            // TODO Allow mutliple task choices
+            if (!choice ) return
+            // TODO Actually show progress
+            vscode.window.withProgress({ location: ProgressLocation.Window, title: choice[0] }, (progress) => {
+                progress.report({message: `Starting ${choice}`})
+                let reply = this.service.runTask(choice[0], progress).catch((reason) => {
+                    vscode.window.showErrorMessage('Error running task: ' + reason.message)
+                })
+                return reply
+            })
+        })
     }
 }
