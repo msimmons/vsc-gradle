@@ -14,11 +14,11 @@ export class GradleController {
     result: ConnectResult
     watcher: vscode.FileSystemWatcher
     problems: vscode.DiagnosticCollection
+    refreshing: boolean = false
 
-    triggerRefresh = async (e: vscode.Uri) => {
-        // TODO debounce
-        if (this.config.get('autorefresh')) {
-            await this.refresh()
+    triggerRefresh = async (uri: vscode.Uri) => {
+        if (this.config.get('autorefresh') && uri.path.includes('gradle')) {
+            await this.refresh(uri.path)
         }
     }
 
@@ -43,22 +43,27 @@ export class GradleController {
         })
     }
 
-    public async refresh() {
+    public async refresh(triggerUri?: string) {
+        if (this.refreshing) return
+        this.refreshing = true
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
-            progress.report({message: 'Refreshing '+this.projectDir})
-            let r = await this.service.refresh()
-            this.setProblems(r)
-            if (r.errors) {
-                this.result.errors = r.errors
+            let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
+            progress.report({message: message})
+            try {
+                let r = await this.service.refresh()
+                this.setProblems(r)
+                if (r.errors) this.result.errors = r.errors
+                else this.result = r
             }
-            else {
-                this.result = r
+            finally {
+                this.refreshing = false
             }
         })
     }
 
     private setProblems(res: ConnectResult) {
         this.problems.clear()
+        if (res.errors.length > 0) vscode.window.showErrorMessage("There were errors connecting to gradle project")
         res.errors.forEach((e) => {
             let uri = e.file ? vscode.Uri.file(e.file) : vscode.Uri.file(this.projectDir)
             let existing = this.problems.get(uri)

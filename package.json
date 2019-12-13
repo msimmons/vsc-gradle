@@ -44,7 +44,7 @@
         "vsc-gradle.refreshGlob": {
           "type": "string",
           "description": "File watcher glob for autorefreshing the gradle project, relative to workspace root",
-          "default": "**/*gradle*"
+          "default": "**/*.{gradle,gradle.kts,properties}"
         }
       }
     }
