@@ -16,7 +16,7 @@ class PluginModelBuilder : ToolingModelBuilder {
 
     override fun buildAll(modelName: String, project: Project): PluginModel {
         val errors = mutableListOf<PluginDiagnostic>()
-        val taskResult = runCatching {  getTasks("", project) }
+        val taskResult = runCatching {  getTasks(project) }
         val dependenciesResult = runCatching { getDependencies(project, errors) }
         val pathsResult = runCatching { getPathDatas(project, errors) }
         // Process any errors
@@ -59,11 +59,15 @@ class PluginModelBuilder : ToolingModelBuilder {
         return PluginDiagnostic.Impl(location.first, location.second, message.toString())
     }
 
-    fun getTasks(prefix: String, project: Project, tasks: MutableCollection<String> = mutableSetOf<String>()) : Collection<String> {
+    fun getTasks(project: Project, prefix: Array<String> = emptyArray(), tasks: MutableCollection<String> = mutableSetOf<String>()) : Collection<String> {
         project.childProjects.forEach {
-            getTasks(project.name, it.value, tasks)
+            val parentPrefix = if (it.value == project.rootProject) prefix else prefix + it.value.name
+            getTasks(it.value, parentPrefix, tasks)
         }
-        tasks.addAll(project.tasks.map { if (prefix.isBlank()) ":${it.name}" else ":${prefix}:${it.name}" })
+        val curPrefix = if ( prefix.size > 0 ) prefix.joinToString(":", ":", ":") { it } else ""
+        tasks.addAll(project.tasks.map { "${curPrefix}${it.name}" })
+        // Add the un-qualified tasks as well
+        if ( !curPrefix.isEmpty()) tasks.addAll(project.tasks.map { it.name })
         return tasks
     }
 

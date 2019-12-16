@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 class GradleServiceSpec {
 
     val projectDir = System.getProperty("projectDir", "")
-    val request = ConnectRequest("$projectDir/server/src/test/resources/test-project", projectDir)
+    val request = ConnectRequest("$projectDir/server/src/test/resources/test-root-project", projectDir)
     val service = GradleService(request)
     var result : Pair<ConnectResult, ProjectUpdateData>
 
@@ -31,8 +31,9 @@ class GradleServiceSpec {
 
 
     @Test
-    fun testSomething() {
-        service.getTasks()
+    fun testGetTasks() {
+        val tasks = service.getTasks()
+        tasks.forEach { println(it) }
     }
 
     @Test

@@ -42,14 +42,13 @@ class GradleService(val request: ConnectRequest) {
      */
     fun refresh() : Pair<ConnectResult, ProjectData> {
         pluginModel = pluginModelBuilder.get()
-        val result = ConnectResult(pluginModel.tasks, pluginModel.errors)
+        val result = ConnectResult(getTasks(), pluginModel.errors)
         val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.paths)
         return result to data
     }
 
-    fun getTasks() : Collection<String> {
-        if (!::pluginModel.isInitialized) refresh()
-        return pluginModel.tasks
+    private fun getTasks() : Collection<String> {
+        return pluginModel.tasks.sortedBy { if (it.startsWith(":")) "9:$it" else "0:$it" }
     }
 
     /**
