@@ -47,7 +47,7 @@ class GradleService(val request: ConnectRequest) {
         return result to data
     }
 
-    private fun getTasks() : Collection<String> {
+    fun getTasks() : Collection<String> {
         return pluginModel.tasks.sortedBy { if (it.startsWith(":")) "9:$it" else "0:$it" }
     }
 
@@ -73,11 +73,12 @@ class GradleService(val request: ConnectRequest) {
     fun runTask(taskName: String) : String {
         val os = ByteArrayOutputStream()
         connection.newBuild()
-                .forTasks(taskName)
-                .setStandardOutput(os)
-                .setStandardError(os)
+                .forTasks(*taskName.split(" ").toTypedArray())
+                .setStandardOutput(System.out)
+                .setStandardError(System.out)
                 .withArguments("--stacktrace", "-Dkotlin.compiler.execution.strategy=\"in-process\"")
-                .addProgressListener({event: ProgressEvent ->  println("PROGRESS: ${event.displayName}")})
+                .addProgressListener({event: ProgressEvent ->
+                })
                 .run()
         return String(os.toByteArray())
     }

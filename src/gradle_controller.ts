@@ -3,7 +3,8 @@
 import * as vscode from 'vscode'
 import { ConnectResult, ConnectRequest } from 'server-models'
 import { GradleService } from './gradle_service';
-import { ProgressLocation } from 'vscode';
+import { ConfigService } from './config_service'
+import { ProgressLocation, QuickInputButtons } from 'vscode';
 
 export class GradleController {
 
@@ -17,17 +18,16 @@ export class GradleController {
     refreshing: boolean = false
 
     triggerRefresh = async (uri: vscode.Uri) => {
-        if (this.config.get('autorefresh') && uri.path.includes('gradle')) {
+        if (ConfigService.isAutorefresh() && uri.path.includes('gradle')) {
             await this.refresh(uri.path)
         }
     }
 
-    constructor(config: any, projectDir: string, extensionDir: string, service: GradleService) {
-        this.config = config
+    constructor(projectDir: string, extensionDir: string, service: GradleService) {
         this.projectDir = projectDir
         this.extensionDir = extensionDir
         this.service = service
-        let pattern = vscode.workspace.rootPath+`/${config.get('refreshGlob')}`
+        let pattern = vscode.workspace.rootPath+`/${ConfigService.refreshGlob()}`
         this.watcher = vscode.workspace.createFileSystemWatcher(pattern)
         this.watcher.onDidChange(this.triggerRefresh)
         this.watcher.onDidDelete(this.triggerRefresh)
@@ -73,18 +73,91 @@ export class GradleController {
         })
     }
 
-    public async runTask() {
-        vscode.window.showQuickPick(this.result.tasks, {canPickMany: false}).then((choice) => {
-            // TODO Allow mutliple task choices
-            if (!choice ) return
-            // TODO Actually show progress
-            vscode.window.withProgress({ location: ProgressLocation.Window, title: choice[0] }, (progress) => {
-                progress.report({message: `Starting ${choice}`})
-                let reply = this.service.runTask(choice[0], progress).catch((reason) => {
-                    vscode.window.showErrorMessage('Error running task: ' + reason.message)
-                })
-                return reply
+    private async chooseGradleTasks(currentTasks? : string) : Promise<string> {
+        let confirmTasks = vscode.window.createInputBox()
+        let taskString = await this.chooseGradleTask(currentTasks)
+        confirmTasks.value = taskString
+        confirmTasks.show()
+        confirmTasks.onDidChangeValue(async (event) => {
+            if (event === ' ') {
+                confirmTasks.hide()
+                taskString = await this.chooseGradleTask(taskString)
+                confirmTasks.value = taskString
+                confirmTasks.show()
+            }
+        })
+        let result = new Promise<string>((resolve, reject) => {
+            confirmTasks.onDidAccept(event => {
+                let choice = confirmTasks.value
+                if (choice) resolve(choice)
+                confirmTasks.dispose()
             })
         })
+        return result
     }
+
+    private async chooseGradleTask(currentTasks? : string) : Promise<string> {
+        let quickPick = vscode.window.createQuickPick()
+        quickPick.matchOnDescription = true
+        quickPick.buttons = [ {iconPath: vscode.ThemeIcon.File, tooltip: "pick it"} as vscode.QuickInputButton ]
+        let taskItems = this.result.tasks.filter(t => {
+            if (!currentTasks) return true
+            else return !currentTasks.split(' ').includes(t)
+        })
+        .map(t => {
+            let label = currentTasks ? `${currentTasks} ${t}` : t
+            return { label: label } as vscode.QuickPickItem
+        })
+        quickPick.value = currentTasks ? `${currentTasks} ` : ''
+        quickPick.items = taskItems
+        let result = new Promise<string>((resolve, reject) => {
+            quickPick.onDidAccept(selection => {
+                quickPick.dispose()
+                if (quickPick.selectedItems.length) {
+                    resolve(quickPick.selectedItems[0].label)
+                }
+                else {
+                    resolve(undefined)
+                }
+            })
+
+        })
+        quickPick.show()
+        return result
+    }
+
+    public async runTask() {
+        let tasks = await this.chooseGradleTasks()
+        this.runGradleTask(tasks)
+    }
+
+    private async runGradleTask(tasks: string) {
+        vscode.workspace.registerTaskProvider
+        let def = {type: 'vsc-code'} as vscode.TaskDefinition
+        const writeEmitter = new vscode.EventEmitter<string>();
+        const closeEmitter = new vscode.EventEmitter<any>();
+        const pty: vscode.Pseudoterminal = {
+            onDidWrite: writeEmitter.event,
+            onDidClose: closeEmitter.event,
+            open: () => {
+                setTimeout(() => { closeEmitter.fire() }, 1000)
+            },
+            close: () => { console.log('Closed')}
+        };
+        let exec = new vscode.CustomExecution(async () => {
+            return pty
+        })
+        let task = new vscode.Task(def, vscode.workspace.workspaceFolders[0], tasks, 'vsc-gradle', exec, [])
+        vscode.tasks.executeTask(task)
+
+        // TODO Actually show progress
+        vscode.window.withProgress({ location: ProgressLocation.Window, title: tasks }, (progress) => {
+            progress.report({message: `Starting ${tasks}`})
+            let reply = this.service.runTask(tasks, progress).catch((reason) => {
+                vscode.window.showErrorMessage('Error running task: ' + reason.message)
+            })
+            return reply
+        })
+    }
+
 }

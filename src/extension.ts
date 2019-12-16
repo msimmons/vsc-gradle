@@ -9,20 +9,17 @@ import { GradleController } from './gradle_controller';
 let jvmcode: any
 let gradleService: GradleService
 let gradleController: GradleController
-let config: any
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
     jvmcode = vscode.extensions.getExtension('contrapt.jvmcode').exports
-    config = vscode.workspace.getConfiguration("vsc-gradle")
 
     installVerticle()
 
     function installVerticle() {
         let jarFile = context.asAbsolutePath('out/vsc-gradle.jar')
-        let config = vscode.workspace.getConfiguration("vsc-gradle")
         let jarFiles = [jarFile]
         jvmcode.install(jarFiles, 'net.contrapt.gradle.GradleVerticle').then((result) => {
             registerProviders()
@@ -38,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     function connectGradle() {
         gradleService = new GradleService(jvmcode)
-        gradleController = new GradleController(config,vscode.workspace.rootPath, context.extensionPath, gradleService)
+        gradleController = new GradleController(vscode.workspace.rootPath, context.extensionPath, gradleService)
         gradleController.connect()
     }
 
