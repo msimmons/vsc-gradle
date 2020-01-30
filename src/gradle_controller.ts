@@ -5,6 +5,7 @@ import { ConnectResult, ConnectRequest } from 'server-models'
 import { GradleService } from './gradle_service';
 import { ConfigService } from './config_service'
 import { ProgressLocation, QuickInputButtons } from 'vscode';
+import { resolve } from 'url';
 
 export class GradleController {
 
@@ -15,10 +16,10 @@ export class GradleController {
     result: ConnectResult
     watcher: vscode.FileSystemWatcher
     problems: vscode.DiagnosticCollection
-    refreshing: boolean = false
+    refreshLock: Promise<boolean>
 
     triggerRefresh = async (uri: vscode.Uri) => {
-        if (ConfigService.isAutorefresh() && uri.path.includes('gradle')) {
+        if (ConfigService.isAutorefresh() && uri.path.includes('gradle') && uri.scheme === 'file') {
             await this.refresh(uri.path)
         }
     }
@@ -27,7 +28,8 @@ export class GradleController {
         this.projectDir = projectDir
         this.extensionDir = extensionDir
         this.service = service
-        let pattern = vscode.workspace.rootPath+`/${ConfigService.refreshGlob()}`
+        let rootPath = vscode.workspace.workspaceFolders[0].uri.path
+        let pattern = `${rootPath}/${ConfigService.refreshGlob()}`
         this.watcher = vscode.workspace.createFileSystemWatcher(pattern)
         this.watcher.onDidChange(this.triggerRefresh)
         this.watcher.onDidDelete(this.triggerRefresh)
@@ -44,20 +46,21 @@ export class GradleController {
     }
 
     public async refresh(triggerUri?: string) {
-        if (this.refreshing) return
-        this.refreshing = true
-        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
-            let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
-            progress.report({message: message})
-            try {
-                let r = await this.service.refresh()
-                this.setProblems(r)
-                if (r.errors) this.result.errors = r.errors
-                else this.result = r
-            }
-            finally {
-                this.refreshing = false
-            }
+        if (this.refreshLock) await this.refreshLock
+        this.refreshLock = new Promise<boolean>((resolve, reject) => {
+            vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
+                let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
+                progress.report({message: message})
+                try {
+                    let r = await this.service.refresh()
+                    this.setProblems(r)
+                    if (r.errors) this.result.errors = r.errors
+                    else this.result = r
+                }
+                finally {
+                    resolve(true)
+                }
+            })
         })
     }
 

@@ -35,7 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     function connectGradle() {
         gradleService = new GradleService(jvmcode)
-        gradleController = new GradleController(vscode.workspace.rootPath, context.extensionPath, gradleService)
+        let rootPath = vscode.workspace.workspaceFolders[0].uri.path
+        gradleController = new GradleController(rootPath, context.extensionPath, gradleService)
         gradleController.connect()
     }
 
