@@ -5,7 +5,8 @@ import { ConnectResult, ConnectRequest } from 'server-models'
 import { GradleService } from './gradle_service';
 import { ConfigService } from './config_service'
 import { ProgressLocation, QuickInputButtons } from 'vscode';
-import { resolve } from 'url';
+import { readFile } from 'fs';
+import * as crypto from 'crypto'
 
 export class GradleController {
 
@@ -17,6 +18,7 @@ export class GradleController {
     watcher: vscode.FileSystemWatcher
     problems: vscode.DiagnosticCollection
     refreshLock: Promise<boolean>
+    fileHashes: Map<string, string> = new Map<string, string>()
 
     triggerRefresh = async (uri: vscode.Uri) => {
         if (ConfigService.isAutorefresh() && uri.path.includes('gradle') && uri.scheme === 'file') {
@@ -47,18 +49,46 @@ export class GradleController {
 
     public async refresh(triggerUri?: string) {
         if (this.refreshLock) await this.refreshLock
-        this.refreshLock = new Promise<boolean>((resolve, reject) => {
-            vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
-                let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
-                progress.report({message: message})
-                try {
-                    let r = await this.service.refresh()
-                    this.setProblems(r)
-                    if (r.errors) this.result.errors = r.errors
-                    else this.result = r
-                }
-                finally {
-                    resolve(true)
+        this.refreshLock = new Promise<boolean>(async (resolve, reject) => {
+            let shouldRefresh = await this.shouldRefresh(triggerUri)
+            if (!shouldRefresh) {
+                resolve(true)
+            }
+            else {
+                vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
+                    let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
+                    progress.report({message: message})
+                    try {
+                        let r = await this.service.refresh()
+                        this.setProblems(r)
+                        if (r.errors) this.result.errors = r.errors
+                        else this.result = r
+                    }
+                    finally {
+                        resolve(true)
+                    }
+                })
+            }
+        })
+    }
+
+    private async shouldRefresh(path?: string) : Promise<boolean> {
+        let hasher = crypto.createHash('md5')
+        return new Promise<boolean>((resolve, reject) => {
+            if (!path) resolve(true)
+            readFile(path, (err, data) => {
+                if (err) resolve(false)
+                else {
+                    hasher.update(data)
+                    let hash = hasher.digest('base64')
+                    if (this.fileHashes.get(path) === hash) {
+                        this.fileHashes.set(path, hash)
+                        resolve(false)
+                    }
+                    else {
+                        this.fileHashes.set(path, hash)
+                        resolve(true)
+                    }
                 }
             })
         })
