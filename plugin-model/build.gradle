@@ -1,5 +1,5 @@
 dependencies {
-    compileOnly group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
+    compileOnly group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: jvmcode_changing
 }
 
 configurations.all {
