@@ -41,7 +41,7 @@ jobs:
             export ORG_GRADLE_PROJECT_gh_registry_key=$GH_REGISTRY_KEY
             ./gradlew assemble deploy test
             source ~/.nvm/nvm.sh
-            nvm i 8
+            nvm i 10
             npm i vsce -g
             npm install
             vsce package

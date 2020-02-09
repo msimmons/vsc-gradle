@@ -2,6 +2,7 @@ package net.contrapt.gradle.plugin
 
 import net.contrapt.gradle.model.PluginModel
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -9,6 +10,8 @@ import org.gradle.api.tasks.TaskAction
  */
 open class GetModelTask : DefaultTask() {
 
+
+    @Input
     override fun getGroup() = "vsc-gradle"
 
     @TaskAction
