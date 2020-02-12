@@ -47,6 +47,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('gradle.run-task', () => {
         gradleController.runTask()
     }))
+
+    context.subscriptions.push(vscode.commands.registerCommand('gradle.choose-tasks', async () => {
+        let tasks = await gradleController.chooseGradleTasks()
+        if (tasks) return tasks
+        else return ""
+    }))
 }
 
 // this method is called when your extension is deactivated

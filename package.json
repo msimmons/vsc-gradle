@@ -2,7 +2,7 @@
   "name": "vsc-gradle",
   "displayName": "VSC Gradle",
   "description": "Gradle integration for vscode",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "contrapt",
   "license": "Apache 2.0",
   "engines": {
@@ -47,7 +47,39 @@
           "default": "**/*.{gradle,gradle.kts,properties}"
         }
       }
-    }
+    },
+    "problemMatchers": [
+      {
+        "label": "gradle",
+        "owner": "vsc-gradle",
+        "name": "gradle-error",
+        "source": "gradle",
+        "fileLocation": "absolute",
+        "severity": "error",
+        "pattern": {
+          "regexp": "^e:\\s+(.*):\\s+\\((\\d+),\\s+(\\d+)\\):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        }
+      },
+      {
+        "label": "gradle",
+        "owner": "vsc-gradle",
+        "name": "gradle-warn",
+        "source": "gradle",
+        "fileLocation": "absolute",
+        "severity": "warning",
+        "pattern": {
+          "regexp": "^w:\\s+(.*):\\s+\\((\\d+),\\s+(\\d+)\\):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile; ./gradlew build deploy",

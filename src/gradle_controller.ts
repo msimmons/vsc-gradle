@@ -106,10 +106,12 @@ export class GradleController {
         })
     }
 
-    private async chooseGradleTasks(currentTasks? : string) : Promise<string> {
+    async chooseGradleTasks(currentTasks? : string) : Promise<string> {
         let confirmTasks = vscode.window.createInputBox()
         let taskString = await this.chooseGradleTask(currentTasks)
         confirmTasks.value = taskString
+        confirmTasks.title = "Gradle Tasks"
+        confirmTasks.prompt = "Enter 'Space' to Choose Another"
         confirmTasks.show()
         confirmTasks.onDidChangeValue(async (event) => {
             if (event === ' ') {
@@ -132,7 +134,6 @@ export class GradleController {
     private async chooseGradleTask(currentTasks? : string) : Promise<string> {
         let quickPick = vscode.window.createQuickPick()
         quickPick.matchOnDescription = true
-        quickPick.buttons = [ {iconPath: vscode.ThemeIcon.File, tooltip: "pick it"} as vscode.QuickInputButton ]
         let taskItems = this.result.tasks.filter(t => {
             if (!currentTasks) return true
             else return !currentTasks.split(' ').includes(t)
