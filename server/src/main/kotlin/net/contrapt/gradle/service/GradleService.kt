@@ -35,12 +35,14 @@ class GradleService(val request: ConnectRequest) {
         pluginModelBuilder = connection.model(PluginModel::class.java)
         pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "${request.extensionDir}/out/m2/repo"))
         pluginModelBuilder.withArguments("--init-script", "${request.extensionDir}/out/m2/init.gradle")
+        pluginModelBuilder.forTasks("properties")
     }
 
     /**
      * Refresh the pluginModel model
      */
     fun refresh() : Pair<ConnectResult, ProjectData> {
+        compile()
         pluginModel = pluginModelBuilder.get()
         val result = ConnectResult(getTasks(), pluginModel.errors)
         val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.paths)
@@ -65,6 +67,20 @@ class GradleService(val request: ConnectRequest) {
     fun getClasspath() : Collection<PathData> {
         if (!::pluginModel.isInitialized) refresh()
         return pluginModel.paths
+    }
+
+    fun compile() {
+        try {
+            connection.newBuild()
+                    .forTasks("classes", "testClasses")
+                    .setStandardOutput(System.out)
+                    .setStandardError(System.out)
+                    .withArguments("--stacktrace", "-Dkotlin.compiler.execution.strategy=\"in-process\"")
+                    .run()
+        }
+        catch (e: Exception) {
+            println(e)
+        }
     }
 
     /**
