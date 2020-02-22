@@ -11,6 +11,7 @@ dependencies {
 
     runtime "ch.qos.logback:logback-classic:1.2.3"
     
+    testCompile "io.vertx:vertx-core:$vertx_version"
     testCompile gradleApi()
 }
 

@@ -1,5 +1,6 @@
 package net.contrapt.gradle.service
 
+import io.vertx.core.logging.LoggerFactory
 import net.contrapt.gradle.model.*
 import net.contrapt.jvmcode.model.DependencySourceData
 import net.contrapt.jvmcode.model.PathData
@@ -18,6 +19,8 @@ import java.io.File
  * Created by mark on 6/17/17.
  */
 class GradleService(val request: ConnectRequest) {
+
+    val logger = LoggerFactory.getLogger(javaClass)
 
     //Settings file '/home/mark/work/vsc-gradle/server/src/test/resources/test-project/settings.gradle' line: 2
     private val LAE_PATTERN = ".*'(.*)'\\s?line:\\s?([0-9]+)\\s?.*".toRegex().toPattern()
@@ -70,16 +73,15 @@ class GradleService(val request: ConnectRequest) {
     }
 
     fun compile() {
+        logger.info("Compiling project")
         try {
             connection.newBuild()
                     .forTasks("classes", "testClasses")
-                    .setStandardOutput(System.out)
-                    .setStandardError(System.out)
-                    .withArguments("--stacktrace", "-Dkotlin.compiler.execution.strategy=\"in-process\"")
+                    .withArguments("-Dkotlin.compiler.execution.strategy=\"in-process\"")
                     .run()
         }
         catch (e: Exception) {
-            println(e)
+            logger.error("Error running compile", e)
         }
     }
 

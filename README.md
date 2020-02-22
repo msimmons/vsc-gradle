@@ -6,9 +6,10 @@ the Gradle services.  It provides insight into the project dependencies and proj
 
 ## Features
 
-- Connect to Gradle build file
-- Supplies dependencies to JVM Code
-- Supplies available build tasks
+- Connect to a Gradle project build file
+- Supplies dependencies and source and class paths to JVM Code
+- Supplies available build tasks. 
+  - Use the command _gradle.choose-tasks_ in your tasks.json to prompt the user to choose available tasks
 
 ## Requirements
 
