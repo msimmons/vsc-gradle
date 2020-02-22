@@ -1,5 +1,6 @@
 package net.contrapt.gradle.service
 
+import io.vertx.core.logging.LoggerFactory
 import net.contrapt.gradle.model.*
 import net.contrapt.jvmcode.model.DependencySourceData
 import net.contrapt.jvmcode.model.PathData
@@ -19,6 +20,8 @@ import java.io.File
  */
 class GradleService(val request: ConnectRequest) {
 
+    val logger = LoggerFactory.getLogger(javaClass)
+
     //Settings file '/home/mark/work/vsc-gradle/server/src/test/resources/test-project/settings.gradle' line: 2
     private val LAE_PATTERN = ".*'(.*)'\\s?line:\\s?([0-9]+)\\s?.*".toRegex().toPattern()
 
@@ -35,12 +38,14 @@ class GradleService(val request: ConnectRequest) {
         pluginModelBuilder = connection.model(PluginModel::class.java)
         pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "${request.extensionDir}/out/m2/repo"))
         pluginModelBuilder.withArguments("--init-script", "${request.extensionDir}/out/m2/init.gradle")
+        pluginModelBuilder.forTasks("properties")
     }
 
     /**
      * Refresh the pluginModel model
      */
     fun refresh() : Pair<ConnectResult, ProjectData> {
+        compile()
         pluginModel = pluginModelBuilder.get()
         val result = ConnectResult(getTasks(), pluginModel.errors)
         val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.paths)
@@ -65,6 +70,19 @@ class GradleService(val request: ConnectRequest) {
     fun getClasspath() : Collection<PathData> {
         if (!::pluginModel.isInitialized) refresh()
         return pluginModel.paths
+    }
+
+    fun compile() {
+        logger.info("Compiling project")
+        try {
+            connection.newBuild()
+                    .forTasks("classes", "testClasses")
+                    .withArguments("-Dkotlin.compiler.execution.strategy=\"in-process\"")
+                    .run()
+        }
+        catch (e: Exception) {
+            logger.error("Error running compile", e)
+        }
     }
 
     /**
