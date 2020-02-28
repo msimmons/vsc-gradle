@@ -153,7 +153,7 @@ class PluginModelBuilder : ToolingModelBuilder {
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->
                     val classDirMap = ss.output.files.associate { dir ->
-                        val key = sourceToOutputTags.firstOrNull { dir.path.contains(it) } ?: ""
+                        val key = sourceToOutputTags.firstOrNull { dir.path.replace(project.buildDir.absolutePath, "").contains(it) } ?: ""
                         key to dir.absolutePath
                     }
                     ss.allSource.srcDirs.forEach { dir ->
