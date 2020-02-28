@@ -23,7 +23,7 @@ open class GetModelTask : DefaultTask() {
             }
         }
         model.paths.forEach {
-            println("${it.name} ${it.module} \n   ${it.sourceDirs} \n   ${it.classDirs}")
+            println("${it.name} ${it.module} \n   ${it.sourceDir} \n   ${it.classDir}")
         }
         model.tasks.forEach {
             println(it)

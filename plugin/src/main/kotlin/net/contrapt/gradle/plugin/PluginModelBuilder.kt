@@ -7,8 +7,12 @@ import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.internal.exceptions.LocationAwareException
 import org.gradle.tooling.provider.model.ToolingModelBuilder
+import java.io.File
+import java.lang.IllegalStateException
 
 class PluginModelBuilder : ToolingModelBuilder {
+
+    val sourceToOutputTags = listOf("java", "kotlin", "groovy", "scala", "resources", "antlr")
 
     override fun canBuild(modelName: String): Boolean {
         return modelName == PluginModel::class.java.name
@@ -139,26 +143,30 @@ class PluginModelBuilder : ToolingModelBuilder {
         return dependencies + projectDependencies
     }
 
-    fun getPathDatas(project: Project, errors: MutableList<PluginDiagnostic>, classpaths: MutableSet<PathData> = mutableSetOf()) : Set<PathData> {
+    fun getPathDatas(project: Project, errors: MutableList<PluginDiagnostic>, pathDatas: MutableSet<PathData> = mutableSetOf()) : Set<PathData> {
         project.childProjects.forEach {
-            getPathDatas(it.value, errors, classpaths)
+            getPathDatas(it.value, errors, pathDatas)
         }
         project.convention.plugins.forEach {
             project.logger.lifecycle("Got plugin ${it.key} ${it.value}")
             val convention = it.value
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->
-                    val cp = PluginPath(PluginModel.SOURCE, ss.name, project.name)
-                    cp.sourceDirs.addAll(ss.allSource.srcDirs.map { it.absolutePath })
-                    cp.classDirs.addAll(ss.output.files.map { it.absolutePath })
-                    classpaths.add(cp)
+                    val classDirMap = ss.output.files.associate { dir ->
+                        val key = sourceToOutputTags.firstOrNull { dir.path.contains(it) } ?: ""
+                        key to dir.absolutePath
+                    }
+                    ss.allSource.srcDirs.forEach { dir ->
+                        val key = sourceToOutputTags.firstOrNull { dir.path.contains(it) } ?: ""
+                        pathDatas.add(PluginPath(PluginModel.SOURCE, ss.name, project.name, dir.absolutePath, classDirMap[key] ?: ""))
+                    }
                 }
             }
             else {
                 project.logger.debug("Skipping convention ${convention::class.java}")
             }
         }
-        return classpaths
+        return pathDatas
     }
 
 }
