@@ -37,16 +37,19 @@ class GradleService(val request: ConnectRequest) {
 
         pluginModelBuilder = connection.model(PluginModel::class.java)
         pluginModelBuilder.setEnvironmentVariables(mutableMapOf("REPO_DIR" to "${request.extensionDir}/out/m2/repo"))
-        pluginModelBuilder.withArguments("--init-script", "${request.extensionDir}/out/m2/init.gradle")
-        pluginModelBuilder.forTasks("properties")
+        pluginModelBuilder.withArguments("--init-script", "${request.extensionDir}/out/m2/init.gradle", "-Dkotlin.compiler.execution.strategy=\"in-process\"")
     }
 
     /**
      * Refresh the pluginModel model
      */
     fun refresh() : Pair<ConnectResult, ProjectData> {
-        compile()
-        pluginModel = pluginModelBuilder.get()
+        try {
+            pluginModel = pluginModelBuilder.forTasks("classes", "testClasses").get()
+        }
+        catch (e: Exception) {
+            pluginModel = pluginModelBuilder.forTasks("properties").get()
+        }
         val result = ConnectResult(getTasks(), pluginModel.errors)
         val data = ProjectData(pluginModel.source, pluginModel.dependencySources, pluginModel.paths)
         return result to data
