@@ -9,6 +9,7 @@ import org.gradle.internal.exceptions.LocationAwareException
 import org.gradle.tooling.provider.model.ToolingModelBuilder
 import java.io.File
 import java.lang.IllegalStateException
+import java.util.UUID
 
 class PluginModelBuilder {
 
@@ -72,7 +73,8 @@ class PluginModelBuilder {
     }
 
     fun resolveSourceArtifacts(project: Project, dependencies: Map<String, PluginDependency>, errors: MutableList<PluginDiagnostic>) {
-        val config = project.configurations.create("${project.name}-vsc-gradle")
+        val configName = "${project.name}-vsc-gradle-${UUID.randomUUID()}"
+        val config = project.configurations.create(configName)
         dependencies.forEach {
             project.dependencies.add(config.name, "${it.key}:sources")
         }
