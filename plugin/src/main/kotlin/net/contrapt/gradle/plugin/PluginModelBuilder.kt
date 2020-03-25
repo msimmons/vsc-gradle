@@ -1,7 +1,7 @@
 package net.contrapt.gradle.plugin
 
-import net.contrapt.gradle.model.PluginDiagnostic
-import net.contrapt.gradle.model.PluginModel
+import net.contrapt.gradle.plugin.PluginDiagnostic
+import net.contrapt.gradle.plugin.PluginModel
 import net.contrapt.jvmcode.model.PathData
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
@@ -10,15 +10,11 @@ import org.gradle.tooling.provider.model.ToolingModelBuilder
 import java.io.File
 import java.lang.IllegalStateException
 
-class PluginModelBuilder : ToolingModelBuilder {
+class PluginModelBuilder {
 
     val sourceToOutputTags = listOf("java", "kotlin", "groovy", "scala", "resources", "antlr")
 
-    override fun canBuild(modelName: String): Boolean {
-        return modelName == PluginModel::class.java.name
-    }
-
-    override fun buildAll(modelName: String, project: Project): PluginModel {
+    fun build(project: Project): PluginModel {
         val errors = mutableListOf<PluginDiagnostic>()
         val taskResult = runCatching {  getTasks(project) }
         val dependenciesResult = runCatching { getDependencies(project, errors) }
@@ -82,7 +78,7 @@ class PluginModelBuilder : ToolingModelBuilder {
         }
         try {
             config.resolvedConfiguration.lenientConfiguration.artifacts.forEach {
-                project.logger.lifecycle("Source artifact ${it.moduleVersion.id.name}")
+                project.logger.debug("Source artifact ${it.moduleVersion.id.name}")
                 if (it.classifier == "sources") {
                     val key = "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
                     dependencies[key]?.sourceFileName = it.file.absolutePath
@@ -148,7 +144,7 @@ class PluginModelBuilder : ToolingModelBuilder {
             getPathDatas(it.value, errors, pathDatas)
         }
         project.convention.plugins.forEach {
-            project.logger.lifecycle("Got plugin ${it.key} ${it.value}")
+            project.logger.debug("Got plugin ${it.key} ${it.value}")
             val convention = it.value
             if (convention is JavaPluginConvention) {
                 convention.sourceSets.forEach {ss ->

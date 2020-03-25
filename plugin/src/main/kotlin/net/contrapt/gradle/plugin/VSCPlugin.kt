@@ -9,16 +9,13 @@ import javax.inject.Inject
 
 class VSCPlugin : Plugin<Project> {
 
-    val registry: ToolingModelBuilderRegistry
-
-    @Inject
-    constructor(registry: ToolingModelBuilderRegistry) {
-        this.registry = registry
-    }
-
     override fun apply(project: Project) {
+        // Properties
+        val extension = VSCPluginExtension()
+        project.extensions.add("VSCGradle", extension)
+
+        // Tasks
         project.tasks.create("getModel", GetModelTask::class.java)
-        registry.register(PluginModelBuilder())
     }
 
 }

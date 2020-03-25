@@ -1,9 +1,0 @@
-repositories {
-    mavenCentral()
-}
-
-apply plugin: 'maven-publish'
-
-dependencies {
-    compileOnly "io.vertx:vertx-core:3.4.1"
-}

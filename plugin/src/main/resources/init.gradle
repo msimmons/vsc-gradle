@@ -6,10 +6,13 @@ initscript {
     }
 
     dependencies {
-        classpath 'net.contrapt:plugin:1.0.0-SNAPSHOT'
+        classpath 'net.contrapt:plugin:1.0.0'
     }
 }
 
 allprojects {
     apply plugin: net.contrapt.gradle.plugin.VSCPlugin
+    VSCGradle {
+        outFile = System.getenv('PROJECT_FILE')
+    }
 }

@@ -2,7 +2,7 @@
   "name": "vsc-gradle",
   "displayName": "VSC Gradle",
   "description": "Gradle integration for vscode",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "publisher": "contrapt",
   "license": "Apache 2.0",
   "engines": {
@@ -46,6 +46,10 @@
           "type": "string",
           "description": "File watcher glob for autorefreshing the gradle project, relative to workspace root",
           "default": "**/*.{gradle,gradle.kts,properties}"
+        },
+        "vsc-gradle.command": {
+          "type": "string",
+          "description": "Optional gradle command; if not set extension will look for the gradle wrapper in the project"
         }
       }
     },

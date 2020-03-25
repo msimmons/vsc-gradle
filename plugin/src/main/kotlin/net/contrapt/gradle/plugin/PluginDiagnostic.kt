@@ -1,4 +1,4 @@
-package net.contrapt.gradle.model
+package net.contrapt.gradle.plugin
 
 import java.io.Serializable
 

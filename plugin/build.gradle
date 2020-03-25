@@ -4,10 +4,9 @@ plugins {
 }
 
 dependencies {
-    compile gradleApi()
-    // Compile only is to avoid the maven lookup of dependencies, we include them in the jar below
-    compileOnly project(":plugin-model")
+    api gradleApi()
     compileOnly group: "net.contrapt.jvmcode", name: "jvmcode-model", version: jvmcode_version, changing: true
+    compileOnly group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.10.3"
 
     testCompile gradleTestKit()
 }
@@ -32,9 +31,10 @@ publishing {
 }
 
 jar {
-    from project(":plugin-model").sourceSets.main.output
-    from { configurations.compileOnly.collect {
-        (it.name.contains('jvmcode-model') || it.name.contains('kotlin-stdlib')) ? (it.isDirectory() ? it : zipTree(it)) : [] }
+    from {
+        configurations.compileOnly.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
     }
 }
 

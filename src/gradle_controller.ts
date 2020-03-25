@@ -1,24 +1,28 @@
 'use strict';
 
 import * as vscode from 'vscode'
-import { ConnectResult, ConnectRequest } from 'server-models'
+import { ConnectResult, ConnectRequest, JvmCodeApi } from './model'
 import { GradleService } from './gradle_service';
 import { ConfigService } from './config_service'
-import { ProgressLocation, QuickInputButtons } from 'vscode';
-import { readFile } from 'fs';
+import { ProgressLocation } from 'vscode';
+import { promisify } from 'util'
+import * as fs from 'fs';
+import * as path from 'path'
 import * as crypto from 'crypto'
+
+const PROJECT_FILE = 'vsc-gradle.json'
 
 export class GradleController {
 
-    config: any
-    projectDir: string
-    extensionDir: string
+    context: vscode.ExtensionContext
     service: GradleService
+    request: ConnectRequest
     result: ConnectResult
     watcher: vscode.FileSystemWatcher
     problems: vscode.DiagnosticCollection
     refreshLock: Promise<boolean>
     fileHashes: Map<string, string> = new Map<string, string>()
+    jvmcode: JvmCodeApi
 
     triggerRefresh = async (uri: vscode.Uri) => {
         if (ConfigService.isAutorefresh() && uri.path.includes('gradle') && uri.scheme === 'file') {
@@ -26,12 +30,12 @@ export class GradleController {
         }
     }
 
-    constructor(projectDir: string, extensionDir: string, service: GradleService) {
-        this.projectDir = projectDir
-        this.extensionDir = extensionDir
-        this.service = service
-        let rootPath = vscode.workspace.workspaceFolders[0].uri.path
-        let pattern = `${rootPath}/${ConfigService.refreshGlob()}`
+    constructor(context: vscode.ExtensionContext) {
+        this.context = context
+        let projectDir = vscode.workspace.workspaceFolders[0].uri.path
+        this.jvmcode = vscode.extensions.getExtension('contrapt.jvmcode').exports
+        this.service = new GradleService()
+        let pattern = `${projectDir}/${ConfigService.refreshGlob()}`
         this.watcher = vscode.workspace.createFileSystemWatcher(pattern)
         this.watcher.onDidChange(this.triggerRefresh)
         this.watcher.onDidDelete(this.triggerRefresh)
@@ -39,12 +43,36 @@ export class GradleController {
     }
 
     public async connect() {
+        let outFile = await this.ensureOutFile()
+        let projectDir = vscode.workspace.workspaceFolders[0].uri.path
+        this.request = {command: this.findCommand(), extensionDir: this.context.extensionPath, projectDir: projectDir, outFile: outFile}
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
-            progress.report({message: 'Connecting to '+this.projectDir})
-            let request = { projectDir: this.projectDir, extensionDir: this.extensionDir } as ConnectRequest
-            this.result = await this.service.connect(request)
-            this.setProblems(this.result)
+            progress.report({message: `Connecting to ${this.request.projectDir}`})
+            try {
+                let r = await this.service.connect(this.request)
+                this.result = r
+                this.setProblems(this.result)
+                this.jvmcode.updateProject(r)
+            }
+            catch (error) {
+                console.error(error)
+            }
         })
+    }
+
+    private findCommand() : string {
+        let configured = ConfigService.command()
+        if (configured) return configured
+        let wrapper = path.join(vscode.workspace.workspaceFolders[0].uri.path, 'gradlew')
+        return wrapper
+    }
+
+    private async ensureOutFile() : Promise<string> {
+        let outDir = this.context.storagePath
+        if (!await promisify(fs.exists)(outDir)) {
+            await promisify(fs.mkdir)(outDir)
+        }
+        return path.join(outDir, PROJECT_FILE)
     }
 
     public async refresh(triggerUri?: string) {
@@ -56,13 +84,14 @@ export class GradleController {
             }
             else {
                 vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'VSC-Gradle' }, async (progress) => {
-                    let message = `Refreshing ${triggerUri ? triggerUri : this.projectDir}`
+                    let message = `Refreshing ${triggerUri ? triggerUri : this.request.projectDir}`
                     progress.report({message: message})
                     try {
-                        let r = await this.service.refresh()
+                        let r = await this.service.connect(this.request)
                         this.setProblems(r)
                         if (r.errors) this.result.errors = r.errors
                         else this.result = r
+                        this.jvmcode.updateProject(r)
                     }
                     finally {
                         resolve(true)
@@ -76,7 +105,7 @@ export class GradleController {
         let hasher = crypto.createHash('md5')
         return new Promise<boolean>((resolve, reject) => {
             if (!path) resolve(true)
-            readFile(path, (err, data) => {
+            fs.readFile(path, (err, data) => {
                 if (err) resolve(false)
                 else {
                     hasher.update(data)
@@ -98,7 +127,7 @@ export class GradleController {
         this.problems.clear()
         if (res.errors.length > 0) vscode.window.showErrorMessage("There were errors connecting to gradle project")
         res.errors.forEach((e) => {
-            let uri = e.file ? vscode.Uri.file(e.file) : vscode.Uri.file(this.projectDir)
+            let uri = e.file ? vscode.Uri.file(e.file) : vscode.Uri.file(this.request.projectDir)
             let existing = this.problems.get(uri)
             let range = e.line ? new vscode.Range(e.line-1, 0, e.line-1, 0) : new vscode.Range(0, 0, 0, 0)
             let diag = new vscode.Diagnostic(range, e.message, vscode.DiagnosticSeverity.Error)
@@ -106,6 +135,10 @@ export class GradleController {
         })
     }
 
+    /**
+     * Allows choosing multiple tasks, this is special sauce
+     * @param currentTasks 
+     */
     async chooseGradleTasks(currentTasks? : string) : Promise<string> {
         let confirmTasks = vscode.window.createInputBox()
         let taskString = await this.chooseGradleTask(currentTasks)
